@@ -73,3 +73,33 @@ def create_reading(db: Session, reading: schemas.ReadingCreate):
     db.refresh(db_reading)
     
     return db_reading
+
+
+# ==========================================
+# CONSULTAS ADICIONALES PARA EL FRONTEND
+# ==========================================
+
+def get_readings_by_sensor(db: Session, sensor_id: str, limit: int = 50):
+    # Devuelve las últimas lecturas de un sensor (ordenadas de la más reciente a la más antigua)
+    return db.query(models.Reading)\
+             .filter(models.Reading.sensor_id == sensor_id)\
+             .order_by(models.Reading.recorded_at.desc())\
+             .limit(limit)\
+             .all()
+
+def get_active_alerts(db: Session):
+    # Devuelve todas las alertas que aún no han sido resueltas
+    return db.query(models.Alert)\
+             .filter(models.Alert.is_resolved == False)\
+             .order_by(models.Alert.created_at.desc())\
+             .all()
+
+def resolve_alert(db: Session, alert_id: str):
+    # Marca una alerta como atendida y guarda la fecha exacta de resolución
+    alert = db.query(models.Alert).filter(models.Alert.id == alert_id).first()
+    if alert:
+        alert.is_resolved = True
+        alert.resolved_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(alert)
+    return alert
